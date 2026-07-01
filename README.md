@@ -1,1 +1,1 @@
-ThalesCrypto
+ThalesCrypto AI agent
