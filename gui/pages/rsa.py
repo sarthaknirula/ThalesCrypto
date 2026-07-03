@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -17,6 +19,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from crypto.rsa import RSAService
+
 
 class RSAPage(QWidget):
     """RSA workspace for key generation and file operations."""
@@ -26,6 +30,7 @@ class RSAPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("rsaPage")
+        self.rsa_service = RSAService()
         self._build_layout()
         self._apply_styles()
 
@@ -112,7 +117,7 @@ class RSAPage(QWidget):
         generate_button = QPushButton("Generate Keys")
         generate_button.setObjectName("primaryButton")
         generate_button.setCursor(Qt.PointingHandCursor)
-        generate_button.clicked.connect(self._show_milestone_message)
+        generate_button.clicked.connect(self._generate_keys)
 
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -262,6 +267,36 @@ class RSAPage(QWidget):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
         if folder_path:
             target.setText(folder_path)
+
+    def _generate_keys(self) -> None:
+        selected_button = self.key_size_group.checkedButton()
+        key_size = int(selected_button.text()) if selected_button else 4096
+
+        if key_size != 4096:
+            QMessageBox.information(
+                self,
+                "Future Milestone",
+                "This key size will be implemented in a future milestone.",
+            )
+            return
+
+        save_location = self.save_location_input.text().strip()
+        save_directory = Path(save_location) if save_location else None
+
+        try:
+            public_key_path, private_key_path = self.rsa_service.generate_key_pair(
+                key_size,
+                save_directory,
+            )
+            QMessageBox.information(
+                self,
+                "RSA Keys Generated",
+                "RSA 4096-bit key pair generated successfully.\n\n"
+                f"Public Key:\n{public_key_path.resolve()}\n\n"
+                f"Private Key:\n{private_key_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "RSA Key Generation Failed", str(exc))
 
     def _show_milestone_message(self) -> None:
         QMessageBox.information(self, "Milestone 3", self.MILESTONE_MESSAGE)
