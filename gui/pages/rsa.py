@@ -174,7 +174,7 @@ class RSAPage(QWidget):
         encrypt_button = QPushButton("Encrypt")
         encrypt_button.setObjectName("primaryButton")
         encrypt_button.setCursor(Qt.PointingHandCursor)
-        encrypt_button.clicked.connect(self._show_milestone_message)
+        encrypt_button.clicked.connect(self._encrypt_file)
 
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -233,7 +233,7 @@ class RSAPage(QWidget):
         decrypt_button = QPushButton("Decrypt")
         decrypt_button.setObjectName("primaryButton")
         decrypt_button.setCursor(Qt.PointingHandCursor)
-        decrypt_button.clicked.connect(self._show_milestone_message)
+        decrypt_button.clicked.connect(self._decrypt_file)
 
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -297,6 +297,45 @@ class RSAPage(QWidget):
             )
         except Exception as exc:
             QMessageBox.critical(self, "RSA Key Generation Failed", str(exc))
+
+    def _encrypt_file(self) -> None:
+        try:
+            saved_path = self.rsa_service.encrypt_file(
+                self._path_from_input(self.public_key_input, "Public key"),
+                self._path_from_input(self.input_file_input, "Input file"),
+                self._path_from_input(self.encrypt_output_folder_input, "Output folder"),
+            )
+            QMessageBox.information(
+                self,
+                "Encryption Successful",
+                "File encrypted successfully.\n\n"
+                f"Saved to:\n{saved_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Encryption Failed", str(exc))
+
+    def _decrypt_file(self) -> None:
+        try:
+            saved_path = self.rsa_service.decrypt_file(
+                self._path_from_input(self.private_key_input, "Private key"),
+                self._path_from_input(self.encrypted_file_input, "Encrypted file"),
+                self._path_from_input(self.decrypt_output_folder_input, "Output folder"),
+            )
+            QMessageBox.information(
+                self,
+                "Decryption Successful",
+                "File decrypted successfully.\n\n"
+                f"Saved to:\n{saved_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Decryption Failed", str(exc))
+
+    def _path_from_input(self, line_edit: QLineEdit, field_name: str) -> Path:
+        path_text = line_edit.text().strip()
+        if not path_text:
+            raise ValueError(f"{field_name} is required.")
+
+        return Path(path_text)
 
     def _show_milestone_message(self) -> None:
         QMessageBox.information(self, "Milestone 3", self.MILESTONE_MESSAGE)
