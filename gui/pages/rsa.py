@@ -272,14 +272,6 @@ class RSAPage(QWidget):
         selected_button = self.key_size_group.checkedButton()
         key_size = int(selected_button.text()) if selected_button else 4096
 
-        if key_size != 4096:
-            QMessageBox.information(
-                self,
-                "Future Milestone",
-                "This key size will be implemented in a future milestone.",
-            )
-            return
-
         save_location = self.save_location_input.text().strip()
         save_directory = Path(save_location) if save_location else None
 
@@ -291,7 +283,8 @@ class RSAPage(QWidget):
             QMessageBox.information(
                 self,
                 "RSA Keys Generated",
-                "RSA 4096-bit key pair generated successfully.\n\n"
+                f"RSA {key_size}-bit key pair generated successfully.\n\n"
+                f"Key Size:\n{key_size}-bit\n\n"
                 f"Public Key:\n{public_key_path.resolve()}\n\n"
                 f"Private Key:\n{private_key_path.resolve()}",
             )

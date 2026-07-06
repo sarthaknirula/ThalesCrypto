@@ -2,6 +2,7 @@ from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives import hashes, serialization
+import datetime
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,7 +12,7 @@ class RSAService() :
     def generate_key_pair(self,key_length : int , save_directory : Path | None = None) -> tuple[Path, Path] :
         self._validate_key_size(key_length)
         if save_directory is None:
-            save_directory = PROJECT_ROOT / "storage" / "keys"
+            save_directory = PROJECT_ROOT / "storage" / "keys" / datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
         else:
             save_directory = Path(save_directory)
 
@@ -20,8 +21,7 @@ class RSAService() :
         private_key, public_key = self._generate_keys(key_length)
         private_ser = self._serialize_private_key(private_key)
         public_ser = self._serialize_public_key(public_key)
-
-        private_key_path = self._save_key(save_directory / "private_key.pem", private_ser)
+        private_key_path = self._save_key(save_directory/ "private_key.pem" , private_ser)
         public_key_path = self._save_key(save_directory / "public_key.pem", public_ser)
 
         return public_key_path, private_key_path
