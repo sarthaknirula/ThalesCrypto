@@ -12,7 +12,7 @@ class RSAService() :
     def generate_key_pair(self,key_length : int , save_directory : Path | None = None) -> tuple[Path, Path] :
         self._validate_key_size(key_length)
         if save_directory is None:
-            save_directory = PROJECT_ROOT / "storage" / "keys" / datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+            save_directory = PROJECT_ROOT / "storage" / "keys" / f"RSA_{key_length}" / datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
         else:
             save_directory = Path(save_directory)
 
