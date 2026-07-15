@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from gui.pages.aes import AESPage
 from gui.pages.base64 import Base64Page
+from gui.pages.des import DESPage
 from gui.pages.home import HomePage
 from gui.pages.merge import FileMergePage
 from gui.pages.rsa import RSAPage
@@ -94,7 +95,16 @@ class MainWindow(QMainWindow):
         layout.addLayout(brand_row)
         layout.addSpacing(22)
 
-        for label in ("Home", "RSA", "AES", "Base64", "File Merge", "Settings"):
+        for label in (
+            "Home",
+            "RSA",
+            "Double DES",
+            "Triple DES",
+            "AES",
+            "Base64",
+            "File Merge",
+            "Settings",
+        ):
             button = self._create_navigation_button(label)
             layout.addWidget(button)
             self._navigation_buttons[label] = button
@@ -125,6 +135,8 @@ class MainWindow(QMainWindow):
         page_factories = (
             ("Home", HomePage),
             ("RSA", RSAPage),
+            ("Double DES", lambda: DESPage("Double DES")),
+            ("Triple DES", lambda: DESPage("Triple DES")),
             ("AES", AESPage),
             ("Base64", Base64Page),
             ("File Merge", FileMergePage),
