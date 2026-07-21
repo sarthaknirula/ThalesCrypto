@@ -34,13 +34,13 @@ class AESService:
         self,
         key_path: Path,
         input_file_path: Path,
-        output_folder: Path,
+        output_folder: Path | None = None,
     ) -> Path:
         key_path = Path(key_path)
         input_file_path = Path(input_file_path)
-        output_folder = Path(output_folder)
 
         self._validate_file(input_file_path, "Input file")
+        output_folder = self._build_encryption_directory(output_folder)
         self._ensure_output_folder(output_folder)
 
         key_bytes = self._load_key(key_path)
@@ -54,13 +54,13 @@ class AESService:
         self,
         key_path: Path,
         input_file_path: Path,
-        output_folder: Path,
+        output_folder: Path | None = None,
     ) -> Path:
         key_path = Path(key_path)
         input_file_path = Path(input_file_path)
-        output_folder = Path(output_folder)
 
         self._validate_file(input_file_path, "Encrypted file")
+        output_folder = self._build_decryption_directory(output_folder)
         self._ensure_output_folder(output_folder)
 
         key_bytes = self._load_key(key_path)
@@ -82,8 +82,23 @@ class AESService:
         if save_directory is not None:
             return Path(save_directory)
 
+        return self._build_timestamped_directory("keys", f"AES_{key_size}")
+
+    def _build_encryption_directory(self, output_folder: Path | None) -> Path:
+        if output_folder is not None:
+            return Path(output_folder)
+
+        return self._build_timestamped_directory("encrypted", "AES")
+
+    def _build_decryption_directory(self, output_folder: Path | None) -> Path:
+        if output_folder is not None:
+            return Path(output_folder)
+
+        return self._build_timestamped_directory("decrypted", "AES")
+
+    def _build_timestamped_directory(self, *parts: str) -> Path:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        return PROJECT_ROOT / "storage" / "keys" / f"AES_{key_size}" / timestamp
+        return PROJECT_ROOT / "storage" / Path(*parts) / timestamp
 
     def _ensure_output_folder(self, output_folder: Path) -> None:
         output_folder.mkdir(parents=True, exist_ok=True)

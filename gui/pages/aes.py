@@ -1,224 +1,505 @@
-from crypto.aes import AESService
+from pathlib import Path
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QVBoxLayout , QWidget , QLabel , QComboBox , QLineEdit , QPushButton , QFormLayout , QHBoxLayout , QFileDialog
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
-class AESPage(QWidget) :
-    def __init__(self) :
+from crypto.aes import AESService
+
+
+class AESPage(QWidget):
+    """AES workspace for key generation and file operations."""
+
+    def __init__(self) -> None:
         super().__init__()
+        self.setObjectName("aesPage")
         self.service = AESService()
+        self._build_layout()
+        self._apply_styles()
 
-        self._create_header_widgets()
-        self._create_key_generation_widgets()
-        self._create_encryption_widgets()
-        self._create_decryption_widgets()
+    def _build_layout(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        self._create_layout()
-        self._connect_signals()
+        scroll_area = QScrollArea()
+        scroll_area.setObjectName("aesScrollArea")
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    def _create_header_widgets(self) -> None :
-        
-        self.header_label = QLabel('AES Workspace')
+        content = QWidget()
+        content.setObjectName("aesContent")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(48, 42, 48, 42)
+        content_layout.setSpacing(24)
+        content_layout.setAlignment(Qt.AlignTop)
+
+        self.header_label = QLabel("AES Workspace")
+        self.header_label.setObjectName("aesTitle")
+
         self.subtitle_label = QLabel(
-            "Generate AES Keys • Encrypt Files • Decrypt Files"
+            "Generate AES Keys and prepare AES encryption workflows."
         )
-        
-    def _create_key_generation_widgets(self) -> None :
+        self.subtitle_label.setObjectName("aesSubtitle")
 
-        self.key_generation_label = QLabel('AES Key Generation')
-        self.key_size_label = QLabel('Select Key Size')
+        content_layout.addWidget(self.header_label)
+        content_layout.addWidget(self.subtitle_label)
+        content_layout.addWidget(self._create_key_generation_group())
+        content_layout.addWidget(self._create_encryption_group())
+        content_layout.addWidget(self._create_decryption_group())
+        content_layout.addStretch()
+
+        scroll_area.setWidget(content)
+        layout.addWidget(scroll_area)
+
+    def _create_key_generation_group(self) -> QGroupBox:
+        group = QGroupBox("AES Key Generation")
+        group.setMinimumHeight(188)
+        group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout = QVBoxLayout(group)
+        layout.setContentsMargins(22, 28, 22, 22)
+        layout.setSpacing(18)
+
+        self.key_size_label = QLabel("Key Size")
+        self.key_size_label.setObjectName("fieldLabel")
+
         self.key_size_combo = QComboBox()
-        self.key_size_combo.addItems(['AES-128' , 'AES-192' , 'AES-256'])
-        self.save_folder_label = QLabel('Save Folder')
+        self.key_size_combo.addItems(["128", "192", "256"])
+        self.key_size_combo.setCursor(Qt.PointingHandCursor)
+
+        self.save_folder_label = QLabel("Save Location")
         self.save_folder_line_edit = QLineEdit()
-        self.save_folder_browse_button = QPushButton('Browse')
-        self.generate_key_button = QPushButton('Generate Key')
+        self.save_folder_line_edit.setPlaceholderText("Select folder for generated keys")
 
-    def _create_key_generation_layout(self) -> QVBoxLayout:
+        self.save_folder_browse_button = self._create_browse_button()
+        self.save_folder_browse_button.clicked.connect(self._browse_generate_key_folder)
 
-        key_generation_layout = QVBoxLayout()
-
-        # Section Title
-        key_generation_layout.addWidget(self.key_generation_label)
-
-        # Form Layout
-        form_layout = QFormLayout()
-
-        form_layout.addRow(
-            self.key_size_label,
-            self.key_size_combo
-        )
-
-        save_folder_layout = QHBoxLayout()
-        save_folder_layout.addWidget(self.save_folder_line_edit)
-        save_folder_layout.addWidget(self.save_folder_browse_button)
-
-        form_layout.addRow(
+        form = self._create_form_layout()
+        form.addRow(self.key_size_label, self.key_size_combo)
+        form.addRow(
             self.save_folder_label,
-            save_folder_layout
+            self._create_path_row(
+                self.save_folder_line_edit,
+                self.save_folder_browse_button,
+            ),
         )
 
-        key_generation_layout.addLayout(form_layout)
+        self.generate_key_button = QPushButton("Generate Keys")
+        self.generate_key_button.setObjectName("primaryButton")
+        self.generate_key_button.setCursor(Qt.PointingHandCursor)
+        self.generate_key_button.clicked.connect(self._generate_key)
 
-        # Button Layout
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(self.generate_key_button)
+        layout.addLayout(form)
+        layout.addLayout(self._create_action_row(self.generate_key_button))
+        return group
 
-        key_generation_layout.addLayout(button_layout)
+    def _create_encryption_group(self) -> QGroupBox:
+        group = QGroupBox("File Encryption")
+        group.setMinimumHeight(212)
+        group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout = QVBoxLayout(group)
+        layout.setContentsMargins(22, 28, 22, 22)
+        layout.setSpacing(18)
 
-        return key_generation_layout
-    
-    def _create_layout(self) -> None:
-
-        main_layout = QVBoxLayout()
-
-        header_layout = QVBoxLayout()
-        header_layout.addWidget(self.header_label)
-        header_layout.addWidget(self.subtitle_label)
-
-        main_layout.addLayout(header_layout)
-
-        main_layout.addLayout(
-            self._create_key_generation_layout()
-        )   
-
-        # Later
-        main_layout.addLayout(self._create_encryption_layout())
-        main_layout.addLayout(self._create_decryption_layout())
-
-        self.setLayout(main_layout)
-
-    def _create_encryption_widgets(self) :
-
-        self.encryption_label = QLabel('File Encryption')
-        self.enc_key_file_label = QLabel('Key File')
+        self.enc_key_file_label = QLabel("Key File")
         self.enc_key_file_line_edit = QLineEdit()
-        self.enc_key_file_browse_button = QPushButton('Browse')
-        self.enc_input_file_label = QLabel('Input File')
+        self.enc_key_file_line_edit.setPlaceholderText("Select AES key file")
+        self.enc_key_file_browse_button = self._create_browse_button()
+        self.enc_key_file_browse_button.clicked.connect(self._browse_encryption_key_file)
+
+        self.enc_input_file_label = QLabel("Input File")
         self.enc_input_file_line_edit = QLineEdit()
-        self.enc_input_file_browse_button = QPushButton('Browse')
-        self.enc_output_folder_label = QLabel('Output Folder')
+        self.enc_input_file_line_edit.setPlaceholderText("Select file to encrypt")
+        self.enc_input_file_browse_button = self._create_browse_button()
+        self.enc_input_file_browse_button.clicked.connect(
+            self._browse_encryption_input_file
+        )
+
+        self.enc_output_folder_label = QLabel("Output Folder")
         self.enc_output_folder_line_edit = QLineEdit()
-        self.enc_output_folder_browse_button = QPushButton('Browse')
-        self.encrypt_file_button = QPushButton('Encrypt')
+        self.enc_output_folder_line_edit.setPlaceholderText(
+            "Select encrypted output folder"
+        )
+        self.enc_output_folder_browse_button = self._create_browse_button()
+        self.enc_output_folder_browse_button.clicked.connect(
+            self._browse_encryption_output_folder
+        )
 
-    def _create_decryption_widgets(self) :
-        
-        self.decryption_label = QLabel('File Decryption')
-        self.dec_key_file_label = QLabel('Key File')
+        form = self._create_form_layout()
+        form.addRow(
+            self.enc_key_file_label,
+            self._create_path_row(
+                self.enc_key_file_line_edit,
+                self.enc_key_file_browse_button,
+            ),
+        )
+        form.addRow(
+            self.enc_input_file_label,
+            self._create_path_row(
+                self.enc_input_file_line_edit,
+                self.enc_input_file_browse_button,
+            ),
+        )
+        form.addRow(
+            self.enc_output_folder_label,
+            self._create_path_row(
+                self.enc_output_folder_line_edit,
+                self.enc_output_folder_browse_button,
+            ),
+        )
+
+        self.encrypt_file_button = QPushButton("Encrypt")
+        self.encrypt_file_button.setObjectName("primaryButton")
+        self.encrypt_file_button.setCursor(Qt.PointingHandCursor)
+        self.encrypt_file_button.clicked.connect(self._encrypt_file)
+
+        layout.addLayout(form)
+        layout.addLayout(self._create_action_row(self.encrypt_file_button))
+        return group
+
+    def _create_decryption_group(self) -> QGroupBox:
+        group = QGroupBox("File Decryption")
+        group.setMinimumHeight(212)
+        group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout = QVBoxLayout(group)
+        layout.setContentsMargins(22, 28, 22, 22)
+        layout.setSpacing(18)
+
+        self.dec_key_file_label = QLabel("Key File")
         self.dec_key_file_line_edit = QLineEdit()
-        self.dec_key_file_browse_button = QPushButton('Browse')
-        self.dec_input_file_label = QLabel('Input File')
+        self.dec_key_file_line_edit.setPlaceholderText("Select AES key file")
+        self.dec_key_file_browse_button = self._create_browse_button()
+        self.dec_key_file_browse_button.clicked.connect(self._browse_decryption_key_file)
+
+        self.dec_input_file_label = QLabel("Encrypted File")
         self.dec_input_file_line_edit = QLineEdit()
-        self.dec_input_file_browse_button = QPushButton('Browse')
-        self.dec_output_folder_label = QLabel('Output Folder')
+        self.dec_input_file_line_edit.setPlaceholderText("Select encrypted file")
+        self.dec_input_file_browse_button = self._create_browse_button()
+        self.dec_input_file_browse_button.clicked.connect(
+            self._browse_decryption_input_file
+        )
+
+        self.dec_output_folder_label = QLabel("Output Folder")
         self.dec_output_folder_line_edit = QLineEdit()
-        self.dec_output_folder_browse_button = QPushButton('Browse')
-        self.decrypt_file_button = QPushButton('Decrypt')
+        self.dec_output_folder_line_edit.setPlaceholderText(
+            "Select decrypted output folder"
+        )
+        self.dec_output_folder_browse_button = self._create_browse_button()
+        self.dec_output_folder_browse_button.clicked.connect(
+            self._browse_decryption_output_folder
+        )
 
-    def _create_encryption_layout(self) -> QVBoxLayout :
+        form = self._create_form_layout()
+        form.addRow(
+            self.dec_key_file_label,
+            self._create_path_row(
+                self.dec_key_file_line_edit,
+                self.dec_key_file_browse_button,
+            ),
+        )
+        form.addRow(
+            self.dec_input_file_label,
+            self._create_path_row(
+                self.dec_input_file_line_edit,
+                self.dec_input_file_browse_button,
+            ),
+        )
+        form.addRow(
+            self.dec_output_folder_label,
+            self._create_path_row(
+                self.dec_output_folder_line_edit,
+                self.dec_output_folder_browse_button,
+            ),
+        )
 
-        encryption_layout = QVBoxLayout()
-        encryption_layout.addWidget(self.encryption_label)
+        self.decrypt_file_button = QPushButton("Decrypt")
+        self.decrypt_file_button.setObjectName("primaryButton")
+        self.decrypt_file_button.setCursor(Qt.PointingHandCursor)
+        self.decrypt_file_button.clicked.connect(self._decrypt_file)
 
-        form_layout = QFormLayout()
+        layout.addLayout(form)
+        layout.addLayout(self._create_action_row(self.decrypt_file_button))
+        return group
 
-        key_file_layout = QHBoxLayout()
-        key_file_layout.addWidget(self.enc_key_file_line_edit)
-        key_file_layout.addWidget(self.enc_key_file_browse_button)
+    def _create_form_layout(self) -> QFormLayout:
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignLeft)
+        form.setFormAlignment(Qt.AlignTop)
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(16)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
 
-        form_layout.addRow(self.enc_key_file_label,key_file_layout)
+        return form
 
-        input_file_layout = QHBoxLayout()
-        input_file_layout.addWidget(self.enc_input_file_line_edit)
-        input_file_layout.addWidget(self.enc_input_file_browse_button)
+    def _create_path_row(self, line_edit: QLineEdit, browse_button: QPushButton) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        layout.addWidget(line_edit, stretch=1)
+        layout.addWidget(browse_button)
 
-        form_layout.addRow(self.enc_input_file_label,input_file_layout)
+        return row
 
-        output_folder_layout = QHBoxLayout()
-        output_folder_layout.addWidget(self.enc_output_folder_line_edit)
-        output_folder_layout.addWidget(self.enc_output_folder_browse_button)
+    def _create_action_row(self, button: QPushButton) -> QHBoxLayout:
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(button)
 
-        form_layout.addRow(self.enc_output_folder_label,output_folder_layout)
+        return button_row
 
-        encryption_layout.addLayout(form_layout)
+    def _create_browse_button(self) -> QPushButton:
+        button = QPushButton("Browse")
+        button.setObjectName("secondaryButton")
+        button.setCursor(Qt.PointingHandCursor)
+        button.setFixedWidth(92)
 
-        encrypt_button_layout = QHBoxLayout()
-        encrypt_button_layout.addWidget(self.encrypt_file_button)
+        return button
 
-        encryption_layout.addLayout(encrypt_button_layout)
+    def _browse_file(self, target: QLineEdit) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select File")
+        if file_path:
+            target.setText(file_path)
 
-        return encryption_layout
+    def _browse_folder(self, target: QLineEdit) -> None:
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folder_path:
+            target.setText(folder_path)
 
-    def _create_decryption_layout(self) -> QVBoxLayout :
-
-        decryption_layout = QVBoxLayout()
-        decryption_layout.addWidget(self.decryption_label)
-
-        form_layout = QFormLayout()
-
-        key_file_layout = QHBoxLayout()
-        key_file_layout.addWidget(self.dec_key_file_line_edit)
-        key_file_layout.addWidget(self.dec_key_file_browse_button)
-
-        form_layout.addRow(self.dec_key_file_label,key_file_layout)
-
-        input_file_layout = QHBoxLayout()
-        input_file_layout.addWidget(self.dec_input_file_line_edit)
-        input_file_layout.addWidget(self.dec_input_file_browse_button)
-
-        form_layout.addRow(self.dec_input_file_label,input_file_layout)
-
-        output_folder_layout = QHBoxLayout()
-        output_folder_layout.addWidget(self.dec_output_folder_line_edit)
-        output_folder_layout.addWidget(self.dec_output_folder_browse_button)
-
-        form_layout.addRow(self.dec_output_folder_label,output_folder_layout)
-
-        decryption_layout.addLayout(form_layout)
-
-        decrypt_button_layout = QHBoxLayout()
-        decrypt_button_layout.addWidget(self.decrypt_file_button)
-
-        decryption_layout.addLayout(decrypt_button_layout)
-
-        return decryption_layout
-    
-    def _browse_file(self,line_edit) :
-        file_path , _ = QFileDialog().getOpenFileName(self, 'Select File')
-        if file_path :
-            line_edit.setText(file_path)
-    
-    def _browse_encryption_key_file(self) -> None :
+    def _browse_encryption_key_file(self) -> None:
         self._browse_file(self.enc_key_file_line_edit)
 
-    def _browse_encryption_input_file(self) -> None :
+    def _browse_encryption_input_file(self) -> None:
         self._browse_file(self.enc_input_file_line_edit)
 
-    def _browse_encryption_output_folder(self) -> None :
-        self._browse_file(self.enc_output_folder_line_edit)
+    def _browse_encryption_output_folder(self) -> None:
+        self._browse_folder(self.enc_output_folder_line_edit)
 
     def _browse_decryption_key_file(self) -> None:
         self._browse_file(self.dec_key_file_line_edit)
 
-    def _browse_decryption_input_file(self) -> None :
+    def _browse_decryption_input_file(self) -> None:
         self._browse_file(self.dec_input_file_line_edit)
 
-    def _browse_decryption_output_folder(self) -> None :
-        self._browse_file(self.dec_output_folder_line_edit)
+    def _browse_decryption_output_folder(self) -> None:
+        self._browse_folder(self.dec_output_folder_line_edit)
 
-    def _browse_generate_key_folder(self) -> None :
-        self._browse_file(self.save_folder_line_edit)
+    def _browse_generate_key_folder(self) -> None:
+        self._browse_folder(self.save_folder_line_edit)
 
-    def _connect_signals(self) :
+    def _generate_key(self) -> None:
+        key_size = int(self.key_size_combo.currentText())
+        save_directory = self._optional_path_from_input(self.save_folder_line_edit)
 
-        self.save_folder_browse_button.clicked.connect(self._browse_generate_key_folder)
+        try:
+            key_path = self.service.generate_key(key_size, save_directory)
+            QMessageBox.information(
+                self,
+                "AES Key Generated",
+                f"AES {key_size}-bit key generated successfully.\n\n"
+                f"Key File:\n{key_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "AES Key Generation Failed", str(exc))
 
-        self.enc_key_file_browse_button.clicked.connect(self._browse_encryption_key_file)
-        self.enc_input_file_browse_button.clicked.connect(self._browse_encryption_input_file)
-        self.enc_output_folder_browse_button.clicked.connect(self._browse_encryption_output_folder)
+    def _encrypt_file(self) -> None:
+        key_path = self._required_path_from_input(
+            self.enc_key_file_line_edit,
+            "Key file",
+        )
+        if key_path is None:
+            return
 
-        self.dec_key_file_browse_button.clicked.connect(self._browse_decryption_key_file)
-        self.dec_input_file_browse_button.clicked.connect(self._browse_decryption_input_file)
-        self.dec_output_folder_browse_button.clicked.connect(self._browse_decryption_output_folder)
-        
+        input_file_path = self._required_path_from_input(
+            self.enc_input_file_line_edit,
+            "Input file",
+        )
+        if input_file_path is None:
+            return
+
+        output_folder = self._optional_path_from_input(
+            self.enc_output_folder_line_edit
+        )
+
+        try:
+            saved_path = self.service.encrypt(key_path, input_file_path, output_folder)
+            QMessageBox.information(
+                self,
+                "Encryption Successful",
+                "File encrypted successfully.\n\n"
+                f"Saved to:\n{saved_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Encryption Failed", str(exc))
+
+    def _decrypt_file(self) -> None:
+        key_path = self._required_path_from_input(
+            self.dec_key_file_line_edit,
+            "Key file",
+        )
+        if key_path is None:
+            return
+
+        encrypted_file_path = self._required_path_from_input(
+            self.dec_input_file_line_edit,
+            "Encrypted file",
+        )
+        if encrypted_file_path is None:
+            return
+
+        output_folder = self._optional_path_from_input(
+            self.dec_output_folder_line_edit
+        )
+
+        try:
+            saved_path = self.service.decrypt(
+                key_path,
+                encrypted_file_path,
+                output_folder,
+            )
+            QMessageBox.information(
+                self,
+                "Decryption Successful",
+                "File decrypted successfully.\n\n"
+                f"Saved to:\n{saved_path.resolve()}",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Decryption Failed", str(exc))
+
+    def _required_path_from_input(
+        self,
+        line_edit: QLineEdit,
+        field_name: str,
+    ) -> Path | None:
+        path_text = line_edit.text().strip()
+        if not path_text:
+            QMessageBox.warning(self, "Missing Required Input", f"{field_name} is required.")
+            line_edit.setFocus()
+            return None
+
+        return Path(path_text)
+
+    def _optional_path_from_input(self, line_edit: QLineEdit) -> Path | None:
+        path_text = line_edit.text().strip()
+        if not path_text:
+            return None
+
+        return Path(path_text)
+
+    def _apply_styles(self) -> None:
+        self.setStyleSheet(
+            """
+            #aesPage {
+                background-color: #121212;
+                color: #ffffff;
+            }
+
+            #aesScrollArea,
+            #aesScrollArea > QWidget > QWidget,
+            #aesContent {
+                background-color: #121212;
+            }
+
+            #aesTitle {
+                color: #ffffff;
+                font-size: 32px;
+                font-weight: 800;
+            }
+
+            #aesSubtitle {
+                color: #B0B0B0;
+                font-size: 15px;
+            }
+
+            QGroupBox {
+                background-color: #1F1F1F;
+                border: 1px solid #303030;
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 17px;
+                font-weight: 700;
+                margin-top: 14px;
+            }
+
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                left: 16px;
+                padding: 0 8px;
+            }
+
+            QLabel {
+                color: #D8D8D8;
+                font-size: 14px;
+                font-weight: 500;
+            }
+
+            #fieldLabel {
+                color: #D8D8D8;
+            }
+
+            QLineEdit,
+            QComboBox {
+                background-color: #151515;
+                border: 1px solid #3A3A3A;
+                border-radius: 6px;
+                color: #ffffff;
+                font-size: 14px;
+                min-height: 38px;
+                padding: 0 12px;
+            }
+
+            QLineEdit:focus,
+            QComboBox:focus {
+                border: 1px solid #39C2D7;
+            }
+
+            QLineEdit::placeholder {
+                color: #7F7F7F;
+            }
+
+            #primaryButton,
+            #secondaryButton {
+                border: none;
+                border-radius: 6px;
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: 700;
+                min-height: 38px;
+                padding: 0 18px;
+            }
+
+            #primaryButton {
+                background-color: #005BBB;
+                min-width: 138px;
+            }
+
+            #primaryButton:hover {
+                background-color: #1976D2;
+            }
+
+            #secondaryButton {
+                background-color: #2D2D2D;
+                min-width: 92px;
+            }
+
+            #secondaryButton:hover {
+                background-color: #3A3A3A;
+            }
+            """
+        )
