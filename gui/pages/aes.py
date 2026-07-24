@@ -110,7 +110,7 @@ class AESPage(QWidget):
 
     def _create_encryption_group(self) -> QGroupBox:
         group = QGroupBox("File Encryption")
-        group.setMinimumHeight(212)
+        group.setMinimumHeight(268)
         group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout = QVBoxLayout(group)
         layout.setContentsMargins(22, 28, 22, 22)
@@ -140,6 +140,15 @@ class AESPage(QWidget):
             self._browse_encryption_output_folder
         )
 
+        self.enc_iv_label = QLabel("Initialization Vector (IV)")
+        self.enc_iv_line_edit = QLineEdit()
+        self.enc_iv_line_edit.setPlaceholderText("Enter 16-byte IV")
+        self.enc_iv_helper_label = QLabel(
+            "Optional. Leave empty to generate a secure random IV automatically."
+        )
+        self.enc_iv_helper_label.setObjectName("helperText")
+        self.enc_iv_helper_label.setWordWrap(True)
+
         form = self._create_form_layout()
         form.addRow(
             self.enc_key_file_label,
@@ -160,6 +169,13 @@ class AESPage(QWidget):
             self._create_path_row(
                 self.enc_output_folder_line_edit,
                 self.enc_output_folder_browse_button,
+            ),
+        )
+        form.addRow(
+            self.enc_iv_label,
+            self._create_input_with_helper(
+                self.enc_iv_line_edit,
+                self.enc_iv_helper_label,
             ),
         )
 
@@ -256,6 +272,16 @@ class AESPage(QWidget):
 
         return row
 
+    def _create_input_with_helper(self, line_edit: QLineEdit, helper_label: QLabel) -> QWidget:
+        wrapper = QWidget()
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(line_edit)
+        layout.addWidget(helper_label)
+
+        return wrapper
+
     def _create_action_row(self, button: QPushButton) -> QHBoxLayout:
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -335,9 +361,15 @@ class AESPage(QWidget):
         output_folder = self._optional_path_from_input(
             self.enc_output_folder_line_edit
         )
+        iv = self._optional_text_from_input(self.enc_iv_line_edit)
 
         try:
-            saved_path = self.service.encrypt(key_path, input_file_path, output_folder)
+            saved_path = self.service.encrypt(
+                key_path,
+                input_file_path,
+                output_folder,
+                iv,
+            )
             QMessageBox.information(
                 self,
                 "Encryption Successful",
@@ -401,6 +433,13 @@ class AESPage(QWidget):
 
         return Path(path_text)
 
+    def _optional_text_from_input(self, line_edit: QLineEdit) -> str | None:
+        text = line_edit.text()
+        if not text:
+            return None
+
+        return text
+
     def _apply_styles(self) -> None:
         self.setStyleSheet(
             """
@@ -451,6 +490,12 @@ class AESPage(QWidget):
 
             #fieldLabel {
                 color: #D8D8D8;
+            }
+
+            #helperText {
+                color: #8F8F8F;
+                font-size: 12px;
+                font-weight: 400;
             }
 
             QLineEdit,

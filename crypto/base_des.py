@@ -38,6 +38,18 @@ class BaseDESService:
     def _generate_iv(self) -> bytes:
         return os.urandom(self.BLOCK_SIZE_BYTES)
 
+    def _resolve_iv(self, iv: bytes | str | None) -> bytes:
+        if iv is None:
+            return self._generate_iv()
+        if isinstance(iv, str):
+            iv = iv.encode()
+        if not isinstance(iv, bytes):
+            raise TypeError("IV must be bytes or text.")
+        if len(iv) != self.BLOCK_SIZE_BYTES:
+            raise ValueError(f"IV must be exactly {self.BLOCK_SIZE_BYTES} bytes.")
+
+        return iv
+
     def _load_key(self, key_path: Path) -> bytes:
         self._validate_file(key_path, "Key file")
         key_bytes = key_path.read_bytes()

@@ -35,6 +35,7 @@ class AESService:
         key_path: Path,
         input_file_path: Path,
         output_folder: Path | None = None,
+        iv: bytes | str | None = None,
     ) -> Path:
         key_path = Path(key_path)
         input_file_path = Path(input_file_path)
@@ -45,7 +46,7 @@ class AESService:
 
         key_bytes = self._load_key(key_path)
         file_bytes = self._read_file_bytes(input_file_path)
-        encrypted_bytes = self._encrypt_bytes(key_bytes, file_bytes)
+        encrypted_bytes = self._encrypt_bytes(key_bytes, file_bytes, iv)
         encrypted_file_path = output_folder / f"{input_file_path.name}.aes.enc"
 
         return self._save_encrypted_file(encrypted_file_path, encrypted_bytes)
@@ -119,6 +120,18 @@ class AESService:
     def _generate_iv(self) -> bytes:
         return os.urandom(self.BLOCK_SIZE_BYTES)
 
+    def _resolve_iv(self, iv: bytes | str | None) -> bytes:
+        if iv is None:
+            return self._generate_iv()
+        if isinstance(iv, str):
+            iv = iv.encode()
+        if not isinstance(iv, bytes):
+            raise TypeError("IV must be bytes or text.")
+        if len(iv) != self.BLOCK_SIZE_BYTES:
+            raise ValueError(f"IV must be exactly {self.BLOCK_SIZE_BYTES} bytes.")
+
+        return iv
+
     def _load_key(self, key_path: Path) -> bytes:
         self._validate_file(key_path, "Key file")
         key_bytes = key_path.read_bytes()
@@ -163,8 +176,13 @@ class AESService:
 
         return Cipher(AES(key_bytes), modes.CBC(iv))
 
-    def _encrypt_bytes(self, key_bytes: bytes, file_bytes: bytes) -> bytes:
-        iv = self._generate_iv()
+    def _encrypt_bytes(
+        self,
+        key_bytes: bytes,
+        file_bytes: bytes,
+        iv: bytes | str | None = None,
+    ) -> bytes:
+        iv = self._resolve_iv(iv)
         padded_bytes = self._pad_bytes(file_bytes)
         encryptor = self._build_cipher(key_bytes, iv).encryptor()
         ciphertext = encryptor.update(padded_bytes) + encryptor.finalize()

@@ -22,6 +22,7 @@ class DoubleDESService(BaseDESService):
         key2_path: Path,
         input_file_path: Path,
         output_folder: Path,
+        iv: bytes | str | None = None,
     ) -> Path:
         key1_path = Path(key1_path)
         key2_path = Path(key2_path)
@@ -33,7 +34,7 @@ class DoubleDESService(BaseDESService):
 
         key1, key2 = self._load_keys(key1_path, key2_path)
         file_bytes = self._read_file_bytes(input_file_path)
-        encrypted_bytes = self._encrypt_bytes(key1, key2, file_bytes)
+        encrypted_bytes = self._encrypt_bytes(key1, key2, file_bytes, iv)
         encrypted_file_path = output_folder / f"{input_file_path.name}.double_des.enc"
 
         return self._save_encrypted_file(encrypted_file_path, encrypted_bytes)
@@ -67,8 +68,14 @@ class DoubleDESService(BaseDESService):
 
         return key1, key2
 
-    def _encrypt_bytes(self, key1: bytes, key2: bytes, file_bytes: bytes) -> bytes:
-        iv = self._generate_iv()
+    def _encrypt_bytes(
+        self,
+        key1: bytes,
+        key2: bytes,
+        file_bytes: bytes,
+        iv: bytes | str | None = None,
+    ) -> bytes:
+        iv = self._resolve_iv(iv)
         padded_bytes = self._pad_bytes(file_bytes)
         first_pass = self._encrypt_with_key(key1, iv, padded_bytes)
         second_pass = self._encrypt_with_key(key2, iv, first_pass)

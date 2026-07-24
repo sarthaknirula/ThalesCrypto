@@ -120,7 +120,7 @@ class DESPage(QWidget):
 
     def _create_encryption_group(self) -> QGroupBox:
         group = QGroupBox("File Encryption")
-        group.setMinimumHeight(212 + (self.key_count - 1) * 54)
+        group.setMinimumHeight(268 + (self.key_count - 1) * 54)
         group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout = QVBoxLayout(group)
         layout.setContentsMargins(22, 28, 22, 22)
@@ -140,6 +140,14 @@ class DESPage(QWidget):
             lambda: self._browse_folder(self.encrypt_output_folder_input)
         )
 
+        self.iv_input = QLineEdit()
+        self.iv_input.setPlaceholderText("Enter 8-byte IV")
+        self.iv_helper = QLabel(
+            "Optional. Leave empty to generate a secure random IV automatically."
+        )
+        self.iv_helper.setObjectName("helperText")
+        self.iv_helper.setWordWrap(True)
+
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignLeft)
         form.setFormAlignment(Qt.AlignTop)
@@ -155,6 +163,10 @@ class DESPage(QWidget):
         form.addRow(
             "Output Folder",
             self._create_path_row(self.encrypt_output_folder_input, encrypt_output_browse),
+        )
+        form.addRow(
+            "Initialization Vector (IV)",
+            self._create_input_with_helper(self.iv_input, self.iv_helper),
         )
 
         encrypt_button = QPushButton("Encrypt")
@@ -253,6 +265,15 @@ class DESPage(QWidget):
         layout.addWidget(browse_button)
         return row
 
+    def _create_input_with_helper(self, line_edit: QLineEdit, helper_label: QLabel) -> QWidget:
+        wrapper = QWidget()
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(line_edit)
+        layout.addWidget(helper_label)
+        return wrapper
+
     def _create_browse_button(self) -> QPushButton:
         button = QPushButton("Browse")
         button.setObjectName("secondaryButton")
@@ -298,6 +319,7 @@ class DESPage(QWidget):
                 *self._key_paths_from_inputs(self.encrypt_key_inputs),
                 self._path_from_input(self.input_file_input, "Input file"),
                 self._path_from_input(self.encrypt_output_folder_input, "Output folder"),
+                self._optional_text_from_input(self.iv_input),
             )
             QMessageBox.information(
                 self,
@@ -336,6 +358,13 @@ class DESPage(QWidget):
             raise ValueError(f"{field_name} is required.")
 
         return Path(path_text)
+
+    def _optional_text_from_input(self, line_edit: QLineEdit) -> str | None:
+        text = line_edit.text()
+        if not text:
+            return None
+
+        return text
 
     def _apply_styles(self) -> None:
         self.setStyleSheet(
@@ -383,6 +412,12 @@ class DESPage(QWidget):
                 color: #D8D8D8;
                 font-size: 14px;
                 font-weight: 500;
+            }
+
+            #helperText {
+                color: #8F8F8F;
+                font-size: 12px;
+                font-weight: 400;
             }
 
             QLineEdit {
