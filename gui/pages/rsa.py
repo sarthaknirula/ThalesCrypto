@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from crypto.rsa import RSAService
+from gui.theme import DARK_THEME, ThemeName, get_workspace_stylesheet
 
 
 class RSAPage(QWidget):
@@ -30,6 +31,7 @@ class RSAPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("rsaPage")
+        self._theme = DARK_THEME
         self.rsa_service = RSAService()
         self._build_layout()
         self._apply_styles()
@@ -333,126 +335,9 @@ class RSAPage(QWidget):
     def _show_milestone_message(self) -> None:
         QMessageBox.information(self, "Milestone 3", self.MILESTONE_MESSAGE)
 
+    def apply_theme(self, theme: ThemeName) -> None:
+        self._theme = theme
+        self._apply_styles()
+
     def _apply_styles(self) -> None:
-        self.setStyleSheet(
-            """
-            #rsaPage {
-                background-color: #121212;
-                color: #ffffff;
-            }
-
-            #rsaScrollArea,
-            #rsaScrollArea > QWidget > QWidget,
-            #rsaContent {
-                background-color: #121212;
-            }
-
-            #rsaTitle {
-                color: #ffffff;
-                font-size: 32px;
-                font-weight: 800;
-            }
-
-            #rsaSubtitle {
-                color: #B0B0B0;
-                font-size: 15px;
-            }
-
-            QGroupBox {
-                background-color: #1F1F1F;
-                border: 1px solid #303030;
-                border-radius: 8px;
-                color: #ffffff;
-                font-size: 17px;
-                font-weight: 700;
-                margin-top: 14px;
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 16px;
-                padding: 0 8px;
-            }
-
-            QLabel,
-            QRadioButton {
-                color: #D8D8D8;
-                font-size: 14px;
-                font-weight: 500;
-            }
-
-            #fieldLabel {
-                color: #D8D8D8;
-            }
-
-            QRadioButton {
-                spacing: 9px;
-                padding-right: 10px;
-            }
-
-            QLineEdit {
-                background-color: #151515;
-                border: 1px solid #3A3A3A;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 14px;
-                min-height: 38px;
-                padding: 0 12px;
-            }
-
-            QLineEdit:focus {
-                border: 1px solid #39C2D7;
-            }
-
-            QLineEdit::placeholder {
-                color: #7F7F7F;
-            }
-
-            QRadioButton::indicator {
-                height: 16px;
-                width: 16px;
-            }
-
-            QRadioButton::indicator:unchecked {
-                border: 2px solid #6A6A6A;
-                border-radius: 8px;
-                background-color: #151515;
-            }
-
-            QRadioButton::indicator:checked {
-                border: 2px solid #39C2D7;
-                border-radius: 8px;
-                background-color: #39C2D7;
-            }
-
-            #primaryButton,
-            #secondaryButton {
-                border: none;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 14px;
-                font-weight: 700;
-                min-height: 38px;
-                padding: 0 18px;
-            }
-
-            #primaryButton {
-                background-color: #005BBB;
-                min-width: 138px;
-            }
-
-            #primaryButton:hover {
-                background-color: #1976D2;
-            }
-
-            #secondaryButton {
-                background-color: #2D2D2D;
-                min-width: 92px;
-            }
-
-            #secondaryButton:hover {
-                background-color: #3A3A3A;
-            }
-            """
-        )
+        self.setStyleSheet(get_workspace_stylesheet(self._theme, "rsa"))

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from crypto.aes import AESService
+from gui.theme import DARK_THEME, ThemeName, get_workspace_stylesheet
 
 
 class AESPage(QWidget):
@@ -27,6 +28,7 @@ class AESPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("aesPage")
+        self._theme = DARK_THEME
         self.service = AESService()
         self._build_layout()
         self._apply_styles()
@@ -440,111 +442,9 @@ class AESPage(QWidget):
 
         return text
 
+    def apply_theme(self, theme: ThemeName) -> None:
+        self._theme = theme
+        self._apply_styles()
+
     def _apply_styles(self) -> None:
-        self.setStyleSheet(
-            """
-            #aesPage {
-                background-color: #121212;
-                color: #ffffff;
-            }
-
-            #aesScrollArea,
-            #aesScrollArea > QWidget > QWidget,
-            #aesContent {
-                background-color: #121212;
-            }
-
-            #aesTitle {
-                color: #ffffff;
-                font-size: 32px;
-                font-weight: 800;
-            }
-
-            #aesSubtitle {
-                color: #B0B0B0;
-                font-size: 15px;
-            }
-
-            QGroupBox {
-                background-color: #1F1F1F;
-                border: 1px solid #303030;
-                border-radius: 8px;
-                color: #ffffff;
-                font-size: 17px;
-                font-weight: 700;
-                margin-top: 14px;
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 16px;
-                padding: 0 8px;
-            }
-
-            QLabel {
-                color: #D8D8D8;
-                font-size: 14px;
-                font-weight: 500;
-            }
-
-            #fieldLabel {
-                color: #D8D8D8;
-            }
-
-            #helperText {
-                color: #8F8F8F;
-                font-size: 12px;
-                font-weight: 400;
-            }
-
-            QLineEdit,
-            QComboBox {
-                background-color: #151515;
-                border: 1px solid #3A3A3A;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 14px;
-                min-height: 38px;
-                padding: 0 12px;
-            }
-
-            QLineEdit:focus,
-            QComboBox:focus {
-                border: 1px solid #39C2D7;
-            }
-
-            QLineEdit::placeholder {
-                color: #7F7F7F;
-            }
-
-            #primaryButton,
-            #secondaryButton {
-                border: none;
-                border-radius: 6px;
-                color: #ffffff;
-                font-size: 14px;
-                font-weight: 700;
-                min-height: 38px;
-                padding: 0 18px;
-            }
-
-            #primaryButton {
-                background-color: #005BBB;
-                min-width: 138px;
-            }
-
-            #primaryButton:hover {
-                background-color: #1976D2;
-            }
-
-            #secondaryButton {
-                background-color: #2D2D2D;
-                min-width: 92px;
-            }
-
-            #secondaryButton:hover {
-                background-color: #3A3A3A;
-            }
-            """
-        )
+        self.setStyleSheet(get_workspace_stylesheet(self._theme, "aes"))

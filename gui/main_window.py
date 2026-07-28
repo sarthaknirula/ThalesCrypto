@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSettings, QSize, Qt
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
@@ -20,6 +20,7 @@ from gui.pages.home import HomePage
 from gui.pages.merge import FileMergePage
 from gui.pages.rsa import RSAPage
 from gui.pages.settings import SettingsPage
+from gui.theme import DARK_THEME, ThemeName, get_app_stylesheet, normalize_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -33,19 +34,32 @@ class MainWindow(QMainWindow):
     INITIAL_WIDTH = 1400
     INITIAL_HEIGHT = 850
     SIDEBAR_WIDTH = 220
+    SETTINGS_ORGANIZATION = "Thales"
+    SETTINGS_APPLICATION = "ThalesCrypto"
+    THEME_SETTING_KEY = "appearance/theme"
 
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(self.WINDOW_TITLE)
         self.resize(self.INITIAL_WIDTH, self.INITIAL_HEIGHT)
 
+        self._settings = QSettings(
+            self.SETTINGS_ORGANIZATION,
+            self.SETTINGS_APPLICATION,
+        )
+        self._theme = self._load_theme()
         self._pages = QStackedWidget()
+        self._page_widgets: list[QWidget] = []
         self._navigation_buttons: dict[str, QPushButton] = {}
 
         self._configure_window()
         self._build_layout()
         self._register_pages()
-        self._apply_styles()
+        self._apply_theme(self._theme, save=False)
+
+    def _load_theme(self) -> ThemeName:
+        theme = self._settings.value(self.THEME_SETTING_KEY, DARK_THEME)
+        return normalize_theme(theme if isinstance(theme, str) else None)
 
     def _configure_window(self) -> None:
         self.setMinimumSize(1000, 650)
@@ -144,7 +158,12 @@ class MainWindow(QMainWindow):
         )
 
         for index, (label, page_factory) in enumerate(page_factories):
-            self._pages.addWidget(page_factory())
+            page = page_factory()
+            self._pages.addWidget(page)
+            self._page_widgets.append(page)
+            if isinstance(page, SettingsPage):
+                page.theme_changed.connect(self._handle_theme_changed)
+
             button = self._navigation_buttons.get(label)
             if button is not None:
                 button.clicked.connect(lambda checked=False, i=index: self._show_page(i))
@@ -162,71 +181,21 @@ class MainWindow(QMainWindow):
             button.style().unpolish(button)
             button.style().polish(button)
 
-    def _apply_styles(self) -> None:
-        self.setStyleSheet(
-            """
-            QMainWindow {
-                background-color: #121212;
-                color: #ffffff;
-            }
+    def _handle_theme_changed(self, theme: str) -> None:
+        self._apply_theme(normalize_theme(theme))
 
-            #sidebar {
-                background-color: #1B1B1B;
-                border-right: 1px solid #2d2d2d;
-            }
+    def _apply_theme(self, theme: ThemeName, save: bool = True) -> None:
+        self._theme = theme
+        if save:
+            self._settings.setValue(self.THEME_SETTING_KEY, theme)
+            self._settings.sync()
 
-            #sidebarIcon {
-                background-color: transparent;
-            }
+        self.setStyleSheet(get_app_stylesheet(theme))
+        for page in self._page_widgets:
+            apply_theme = getattr(page, "apply_theme", None)
+            if callable(apply_theme):
+                apply_theme(theme)
 
-            #sidebarBrand {
-                color: #ffffff;
-                font-size: 18px;
-                font-weight: 700;
-            }
-
-            #navigationButton {
-                background-color: transparent;
-                border: none;
-                border-radius: 8px;
-                color: #B0B0B0;
-                font-size: 15px;
-                font-weight: 600;
-                padding: 11px 14px;
-                text-align: left;
-            }
-
-            #navigationButton:hover {
-                background-color: #1976D2;
-                color: #ffffff;
-            }
-
-            #navigationButton[active="true"] {
-                background-color: #005BBB;
-                color: #ffffff;
-            }
-
-            #contentArea {
-                background-color: #121212;
-            }
-
-            QStackedWidget {
-                background-color: #121212;
-            }
-
-            #placeholderPage {
-                background-color: #121212;
-            }
-
-            #placeholderTitle {
-                color: #ffffff;
-                font-size: 34px;
-                font-weight: 700;
-            }
-
-            #placeholderSubtitle {
-                color: #B0B0B0;
-                font-size: 15px;
-            }
-            """
-        )
+        for button in self._navigation_buttons.values():
+            button.style().unpolish(button)
+            button.style().polish(button)

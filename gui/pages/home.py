@@ -4,6 +4,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
+from gui.theme import DARK_THEME, ThemeName, get_home_stylesheet
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOGO_PATH = PROJECT_ROOT / "assets" / "logo" / "logo.png"
@@ -15,6 +17,7 @@ class HomePage(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("homePage")
+        self._theme = DARK_THEME
         self._build_layout()
         self._apply_styles()
 
@@ -70,38 +73,9 @@ class HomePage(QWidget):
 
         layout.addWidget(content)
 
+    def apply_theme(self, theme: ThemeName) -> None:
+        self._theme = theme
+        self._apply_styles()
+
     def _apply_styles(self) -> None:
-        self.setStyleSheet(
-            """
-            #homePage {
-                background-color: #121212;
-            }
-
-            #homeCard {
-                background-color: #232323;
-                border: 1px solid #303030;
-                border-radius: 8px;
-            }
-
-            #homeLogo {
-                background-color: transparent;
-            }
-
-            #homeTitle {
-                color: #ffffff;
-                font-size: 44px;
-                font-weight: 800;
-            }
-
-            #homeSubtitle {
-                color: #39C2D7;
-                font-size: 22px;
-                font-weight: 600;
-            }
-
-            #homeWelcome {
-                color: #B0B0B0;
-                font-size: 17px;
-            }
-            """
-        )
+        self.setStyleSheet(get_home_stylesheet(self._theme))
