@@ -201,31 +201,249 @@ def get_home_stylesheet(theme: ThemeName) -> str:
                 background-color: #F5F7FA;
             }
 
-            #homeCard {
-                background-color: #FFFFFF;
-                border: 1px solid #DDE3EA;
-                border-radius: 8px;
+            #homeTitle {
+                color: #111827;
+                font-size: 32px;
+                font-weight: 800;
+            }
+
+            #homeSubtitle {
+                color: #52606D;
+                font-size: 16px;
             }
 
             #homeLogo {
                 background-color: transparent;
             }
 
-            #homeTitle {
+            #chatScrollArea {
+                background-color: #FFFFFF;
+                border: 1px solid #DDE3EA;
+                border-radius: 10px;
+            }
+
+            #chatContent {
+                background-color: #FFFFFF;
+            }
+
+            #suggestionScrollArea,
+            #suggestionContent {
+                background-color: transparent;
+                border: none;
+            }
+
+            #suggestionScrollArea {
+                max-height: 48px;
+            }
+
+            #chatInputPanel {
+                background-color: #FFFFFF;
+                border: 1px solid #DDE3EA;
+                border-radius: 10px;
+            }
+
+            #chatInput {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 8px;
+                color: #1F2933;
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+
+            #chatInput:focus {
+                border: 1px solid #1976D2;
+            }
+
+            #sendButton {
+                background-color: #1976D2;
+                border: none;
+                border-radius: 8px;
+                color: #FFFFFF;
+                font-size: 14px;
+                font-weight: 700;
+                padding: 0 16px;
+            }
+
+            #sendButton:hover {
+                background-color: #1565C0;
+            }
+
+            #sendButton:disabled {
+                background-color: #A0AEC0;
+                color: #F8FAFC;
+            }
+
+            #suggestionButton {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 16px;
+                color: #1976D2;
+                font-size: 13px;
+                font-weight: 600;
+                padding: 0 12px;
+                text-align: center;
+            }
+
+            #suggestionButton:hover {
+                background-color: #E8F1FB;
+                border-color: #90CDF4;
+            }
+
+            #suggestionButton:disabled {
+                background-color: #EDF2F7;
+                color: #94A3B8;
+            }
+
+            #userMessage {
+                background-color: #1976D2;
+                border: 1px solid #1565C0;
+                border-radius: 14px;
+                padding: 12px 15px;
+            }
+
+            #assistantMessage {
+                background-color: #F8FAFC;
+                border: 1px solid #DDE3EA;
+                border-radius: 14px;
+                padding: 12px 15px;
+            }
+
+            #welcomeMessage {
+                background-color: #FFFFFF;
+                border: 1px solid #D7E3F1;
+                border-radius: 14px;
+                padding: 18px 20px;
+            }
+
+            #thinkingMessage {
+                background-color: #EFF4F8;
+                border: 1px solid #DDE3EA;
+                border-radius: 14px;
+                padding: 12px 15px;
+            }
+
+            #toolMessage {
+                background-color: #EDF7F0;
+                border: 1px solid #B7DFC3;
+                border-radius: 14px;
+                padding: 12px 15px;
+            }
+
+            #errorMessage {
+                background-color: #FFF5F5;
+                border: 1px solid #F4B5B5;
+                border-radius: 14px;
+                padding: 12px 15px;
+            }
+
+            #assistantMessageTitle {
                 color: #111827;
-                font-size: 44px;
+                font-size: 17px;
                 font-weight: 800;
             }
 
-            #homeSubtitle {
-                color: #005BBB;
-                font-size: 22px;
-                font-weight: 600;
+            #welcomeMessageTitle {
+                color: #111827;
+                font-size: 18px;
+                font-weight: 800;
             }
 
-            #homeWelcome {
+            #assistantMessageText,
+            #welcomeMessageText {
+                color: #1F2933;
+                font-size: 14px;
+            }
+
+            #userMessageText {
+                color: #FFFFFF;
+                font-size: 14px;
+            }
+
+            #thinkingMessageText {
                 color: #52606D;
-                font-size: 17px;
+                font-size: 14px;
+            }
+
+            #toolMessageText {
+                color: #1E5631;
+                font-size: 14px;
+            }
+
+            #errorMessageText {
+                color: #9B2C2C;
+                font-size: 14px;
+            }
+
+            #messageMeta {
+                color: #7B8794;
+                font-size: 11px;
+            }
+
+            #toolResultCard {
+                background-color: #EDF7F0;
+                border: 1px solid #B7DFC3;
+                border-radius: 14px;
+                padding: 16px 18px;
+            }
+
+            #toolResultTitle {
+                color: #1E5631;
+                font-size: 16px;
+                font-weight: 800;
+            }
+
+            #toolResultLabel {
+                color: #52606D;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            #toolResultValue {
+                color: #1F2933;
+                font-size: 14px;
+            }
+
+            QScrollBar:vertical {
+                background-color: #EEF2F6;
+                border: none;
+                margin: 2px;
+                width: 10px;
+            }
+
+            QScrollBar::handle:vertical {
+                background-color: #C1CAD4;
+                border-radius: 5px;
+                min-height: 24px;
+            }
+
+            QScrollBar::handle:vertical:hover {
+                background-color: #A5B3C2;
+            }
+
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical,
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical,
+            QScrollBar::add-line:horizontal,
+            QScrollBar::sub-line:horizontal,
+            QScrollBar::add-page:horizontal,
+            QScrollBar::sub-page:horizontal {
+                background: transparent;
+                border: none;
+            }
+
+            QScrollBar:horizontal {
+                background-color: transparent;
+                border: none;
+                height: 8px;
+                margin: 0;
+            }
+
+            QScrollBar::handle:horizontal {
+                background-color: #C1CAD4;
+                border-radius: 4px;
+                min-width: 32px;
             }
         """
 
@@ -234,31 +452,249 @@ def get_home_stylesheet(theme: ThemeName) -> str:
             background-color: #121212;
         }
 
-        #homeCard {
-            background-color: #232323;
-            border: 1px solid #303030;
-            border-radius: 8px;
+        #homeTitle {
+            color: #FFFFFF;
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        #homeSubtitle {
+            color: #B0B0B0;
+            font-size: 16px;
         }
 
         #homeLogo {
             background-color: transparent;
         }
 
-        #homeTitle {
-            color: #ffffff;
-            font-size: 44px;
+        #chatScrollArea {
+            background-color: #1B1B1B;
+            border: 1px solid #303030;
+            border-radius: 10px;
+        }
+
+        #chatContent {
+            background-color: #1B1B1B;
+        }
+
+        #suggestionScrollArea,
+        #suggestionContent {
+            background-color: transparent;
+            border: none;
+        }
+
+        #suggestionScrollArea {
+            max-height: 48px;
+        }
+
+        #chatInputPanel {
+            background-color: #1B1B1B;
+            border: 1px solid #303030;
+            border-radius: 10px;
+        }
+
+        #chatInput {
+            background-color: #151515;
+            border: 1px solid #3A3A3A;
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-size: 14px;
+            padding: 10px 12px;
+        }
+
+        #chatInput:focus {
+            border: 1px solid #39C2D7;
+        }
+
+        #sendButton {
+            background-color: #1976D2;
+            border: none;
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 0 16px;
+        }
+
+        #sendButton:hover {
+            background-color: #1565C0;
+        }
+
+        #sendButton:disabled {
+            background-color: #4A5568;
+            color: #CBD5E0;
+        }
+
+        #suggestionButton {
+            background-color: #232323;
+            border: 1px solid #3A3A3A;
+            border-radius: 16px;
+            color: #8AB4F8;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 0 12px;
+            text-align: center;
+        }
+
+        #suggestionButton:hover {
+            background-color: #2C3642;
+            border-color: #5B708B;
+        }
+
+        #suggestionButton:disabled {
+            background-color: #1A1A1A;
+            color: #6B7280;
+        }
+
+        #userMessage {
+            background-color: #0F4C81;
+            border: 1px solid #1663A6;
+            border-radius: 14px;
+            padding: 12px 15px;
+        }
+
+        #assistantMessage {
+            background-color: #232323;
+            border: 1px solid #303030;
+            border-radius: 14px;
+            padding: 12px 15px;
+        }
+
+        #welcomeMessage {
+            background-color: #232323;
+            border: 1px solid #354456;
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+
+        #thinkingMessage {
+            background-color: #1F1F1F;
+            border: 1px solid #353535;
+            border-radius: 14px;
+            padding: 12px 15px;
+        }
+
+        #toolMessage {
+            background-color: #173021;
+            border: 1px solid #2B5B3B;
+            border-radius: 14px;
+            padding: 12px 15px;
+        }
+
+        #errorMessage {
+            background-color: #432020;
+            border: 1px solid #7A3838;
+            border-radius: 14px;
+            padding: 12px 15px;
+        }
+
+        #assistantMessageTitle {
+            color: #FFFFFF;
+            font-size: 17px;
             font-weight: 800;
         }
 
-        #homeSubtitle {
-            color: #39C2D7;
-            font-size: 22px;
-            font-weight: 600;
+        #welcomeMessageTitle {
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 800;
         }
 
-        #homeWelcome {
+        #assistantMessageText,
+        #welcomeMessageText {
+            color: #F5F5F5;
+            font-size: 14px;
+        }
+
+        #userMessageText {
+            color: #FFFFFF;
+            font-size: 14px;
+        }
+
+        #thinkingMessageText {
             color: #B0B0B0;
-            font-size: 17px;
+            font-size: 14px;
+        }
+
+        #toolMessageText {
+            color: #D7F4DC;
+            font-size: 14px;
+        }
+
+        #errorMessageText {
+            color: #FFD7D7;
+            font-size: 14px;
+        }
+
+        #messageMeta {
+            color: #8A8A8A;
+            font-size: 11px;
+        }
+
+        #toolResultCard {
+            background-color: #173021;
+            border: 1px solid #2B5B3B;
+            border-radius: 14px;
+            padding: 16px 18px;
+        }
+
+        #toolResultTitle {
+            color: #D7F4DC;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        #toolResultLabel {
+            color: #A7B3C2;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        #toolResultValue {
+            color: #F5F5F5;
+            font-size: 14px;
+        }
+
+        QScrollBar:vertical {
+            background-color: #151515;
+            border: none;
+            margin: 2px;
+            width: 10px;
+        }
+
+        QScrollBar::handle:vertical {
+            background-color: #555555;
+            border-radius: 5px;
+            min-height: 24px;
+        }
+
+        QScrollBar::handle:vertical:hover {
+            background-color: #707070;
+        }
+
+        QScrollBar::add-line:vertical,
+        QScrollBar::sub-line:vertical,
+        QScrollBar::add-page:vertical,
+        QScrollBar::sub-page:vertical,
+        QScrollBar::add-line:horizontal,
+        QScrollBar::sub-line:horizontal,
+        QScrollBar::add-page:horizontal,
+        QScrollBar::sub-page:horizontal {
+            background: transparent;
+            border: none;
+        }
+
+        QScrollBar:horizontal {
+            background-color: transparent;
+            border: none;
+            height: 8px;
+            margin: 0;
+        }
+
+        QScrollBar::handle:horizontal {
+            background-color: #555555;
+            border-radius: 4px;
+            min-width: 32px;
         }
     """
 
