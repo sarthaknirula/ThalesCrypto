@@ -8,7 +8,9 @@ from google.genai import types
 
 from core import settings
 
+from .conversation import ConversationManager, get_conversation_manager
 from .prompts import SYSTEM_PROMPT
+from .session_state import SessionState, get_session_state
 
 
 class AIService:
@@ -17,11 +19,19 @@ class AIService:
     DEFAULT_MODEL = settings.GEMINI_MODEL
     DEFAULT_TEMPERATURE = settings.GEMINI_TEMPERATURE
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        conversation_manager: ConversationManager | None = None,
+        session_state: SessionState | None = None,
+    ) -> None:
         """Configure the Gemini client and start a persistent chat session."""
         self.client: genai.Client | None = None
         self.chat_session: Any | None = None
         self.model_name = self.DEFAULT_MODEL
+        self.conversation_manager = (
+            conversation_manager or get_conversation_manager()
+        )
+        self.session_state = session_state or get_session_state()
 
         self._configure_client()
         self._start_chat()
@@ -53,7 +63,31 @@ class AIService:
             raise RuntimeError("Gemini chat session is not started.")
 
         try:
-            response = self.chat_session.send_message(user_message)
+            response = self.chat_session.send_message(self._build_prompt(user_message))
             return response.text or ""
         except Exception as exc:
             raise RuntimeError(f"Gemini request failed: {exc}") from exc
+
+    def _build_prompt(self, user_message: str) -> str:
+        """Build a memory-aware prompt while preserving the JSON contract."""
+        sections = [
+            "System Prompt",
+            SYSTEM_PROMPT.strip(),
+        ]
+
+        session_context = self.session_state.format_context()
+        if session_context:
+            sections.append(session_context)
+
+        conversation_history = self.conversation_manager.format_history()
+        if conversation_history:
+            sections.append(conversation_history)
+
+        sections.extend(
+            [
+                "Current User Message",
+                user_message,
+            ]
+        )
+
+        return "\n\n".join(sections)

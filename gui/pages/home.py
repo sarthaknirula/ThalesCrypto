@@ -3,10 +3,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal
 from PySide6.QtGui import QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
-    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -18,9 +17,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ai.conversation import ConversationManager, get_conversation_manager
 from ai.dispatcher import AIDispatcher
 from ai.parser import AIParser
 from ai.service import AIService
+from ai.session_state import SessionState, get_session_state
 from gui.theme import DARK_THEME, ThemeName, get_home_stylesheet
 
 
@@ -53,6 +54,140 @@ class AIIntegrationError(Exception):
         super().__init__(str(original))
         self.stage = stage
         self.original = original
+
+
+class AIWorker(QObject):
+    """Run the existing AI backend pipeline away from the GUI thread."""
+
+    started = Signal()
+    finished = Signal()
+    result_ready = Signal(object)
+    error_occurred = Signal(str)
+
+    def __init__(
+        self,
+        user_message: str,
+        conversation_manager: ConversationManager | None = None,
+        session_state: SessionState | None = None,
+    ) -> None:
+        super().__init__()
+        self.user_message = user_message
+        self.conversation_manager = (
+            conversation_manager or get_conversation_manager()
+        )
+        self.session_state = session_state or get_session_state()
+
+    def run(self) -> None:
+        self.started.emit()
+        try:
+            result = self._run_pipeline()
+        except Exception as exc:
+            self.error_occurred.emit(self._friendly_error_message(exc))
+        else:
+            self._record_success(result)
+            self.result_ready.emit(result)
+        finally:
+            self.finished.emit()
+
+    def _run_pipeline(self) -> AIResult:
+        try:
+            raw_response = AIService().generate_response(self.user_message)
+        except Exception as exc:
+            raise AIIntegrationError("service", exc) from exc
+
+        try:
+            parsed_response = AIParser().parse(raw_response)
+        except Exception as exc:
+            raise AIIntegrationError("parser", exc) from exc
+
+        try:
+            dispatch_result = AIDispatcher().dispatch(parsed_response)
+        except Exception as exc:
+            raise AIIntegrationError("dispatcher", exc) from exc
+
+        return AIResult(parsed_response, dispatch_result)
+
+    def _record_success(self, result: AIResult) -> None:
+        self.conversation_manager.add_user_message(self.user_message)
+
+        if result.parsed_response.get("action") == "tool":
+            self.session_state.update_from_tool_result(
+                result.parsed_response,
+                result.dispatch_result,
+            )
+
+        self.conversation_manager.add_assistant_message(
+            self._format_assistant_memory(result)
+        )
+
+    def _format_assistant_memory(self, result: AIResult) -> str:
+        action = result.parsed_response.get("action")
+        if action in {"chat", "clarify"}:
+            return str(result.dispatch_result)
+
+        if action == "tool":
+            service = str(result.parsed_response.get("service", "Tool")).replace(
+                "_",
+                " ",
+            )
+            operation = str(result.parsed_response.get("operation", "operation"))
+            result_text = self._format_result_value(result.dispatch_result)
+            return (
+                f"{service.title()} {operation.replace('_', ' ')} completed "
+                f"successfully. {result_text}"
+            )
+
+        return str(result.dispatch_result)
+
+    def _format_result_value(self, result: Any) -> str:
+        paths = self._flatten_paths(result)
+        if paths:
+            return "Result: " + ", ".join(str(path) for path in paths)
+
+        if result is None:
+            return ""
+
+        return f"Result: {result}"
+
+    def _flatten_paths(self, value: Any) -> list[Path]:
+        if isinstance(value, Path):
+            return [value]
+        if isinstance(value, dict):
+            paths: list[Path] = []
+            for item in value.values():
+                paths.extend(self._flatten_paths(item))
+            return paths
+        if isinstance(value, (list, tuple)):
+            paths: list[Path] = []
+            for item in value:
+                paths.extend(self._flatten_paths(item))
+            return paths
+
+        return []
+
+    def _friendly_error_message(self, error: Exception) -> str:
+        if isinstance(error, AIIntegrationError):
+            if error.stage == "service":
+                return (
+                    "I couldn't reach the AI service or complete its request right "
+                    f"now. {error.original}"
+                )
+
+            if error.stage == "parser":
+                return (
+                    "I received a response from the AI service, but it was not in "
+                    f"the expected format. {error.original}"
+                )
+
+            return (
+                "I understood the request, but couldn't complete the crypto "
+                f"operation. {error.original}"
+            )
+
+        return (
+            "Something went wrong while completing that request. "
+            "Please try again or rephrase it."
+        )
 
 
 class ChatInput(QTextEdit):
@@ -175,9 +310,8 @@ class HomePage(QWidget):
         super().__init__()
         self.setObjectName("homePage")
         self._theme = DARK_THEME
-        self._ai_service: AIService | None = None
-        self._ai_parser = AIParser()
-        self._ai_dispatcher = AIDispatcher()
+        self._thread: QThread | None = None
+        self._worker: AIWorker | None = None
         self._is_busy = False
 
         self._build_layout()
@@ -316,73 +450,40 @@ class HomePage(QWidget):
         self._append_message("user", message)
         self._append_typing_indicator()
         self._set_busy(True)
-        QApplication.processEvents()
+        self._start_worker(message)
 
-        try:
-            result = self._run_ai_pipeline(message)
-        except Exception as exc:
-            self._remove_thinking_message()
-            self._append_error_message(exc)
-        else:
-            self._remove_thinking_message()
-            self._append_result(result)
-        finally:
-            self._set_busy(False)
-            self._scroll_to_bottom()
+    def _start_worker(self, message: str) -> None:
+        self._thread = QThread(self)
+        self._worker = AIWorker(message)
+        self._worker.moveToThread(self._thread)
 
-    def _run_ai_pipeline(self, message: str) -> AIResult:
-        try:
-            if self._ai_service is None:
-                self._ai_service = AIService()
+        self._thread.started.connect(self._worker.run)
+        self._worker.result_ready.connect(self._handle_worker_result)
+        self._worker.error_occurred.connect(self._handle_worker_error)
+        self._worker.finished.connect(self._worker.deleteLater)
+        self._worker.finished.connect(self._thread.quit)
+        self._thread.finished.connect(self._cleanup_worker_thread)
+        self._thread.start()
 
-            raw_response = self._ai_service.generate_response(message)
-        except Exception as exc:
-            raise AIIntegrationError("service", exc) from exc
+    def _handle_worker_result(self, result: AIResult) -> None:
+        self._remove_thinking_message()
+        self._append_result(result)
+        self._scroll_to_bottom()
 
-        try:
-            parsed_response = self._ai_parser.parse(raw_response)
-        except Exception as exc:
-            raise AIIntegrationError("parser", exc) from exc
+    def _handle_worker_error(self, error_message: str) -> None:
+        self._remove_thinking_message()
+        self._append_message("error", error_message)
+        self._scroll_to_bottom()
 
-        try:
-            dispatch_result = self._ai_dispatcher.dispatch(parsed_response)
-        except Exception as exc:
-            raise AIIntegrationError("dispatcher", exc) from exc
+    def _cleanup_worker_thread(self) -> None:
+        thread = self._thread
+        if thread is not None:
+            thread.wait()
+            thread.deleteLater()
 
-        return AIResult(parsed_response, dispatch_result)
-
-    def _append_error_message(self, error: Exception) -> None:
-        self._append_message("error", self._friendly_error_message(error))
-
-    def _friendly_error_message(self, error: Exception) -> str:
-        if isinstance(error, AIIntegrationError):
-            if error.stage == "service":
-                return (
-                    "I couldn't reach the AI service or complete its request right "
-                    f"now. {error.original}"
-                )
-
-            if error.stage == "parser":
-                return (
-                    "I received a response from the AI service, but it was not in "
-                    f"the expected format. {error.original}"
-                )
-
-            return (
-                "I understood the request, but couldn't complete the crypto "
-                f"operation. {error.original}"
-            )
-
-        if isinstance(error, (RuntimeError, ConnectionError, TimeoutError)):
-            return (
-                "I couldn't reach the AI service or complete its request right "
-                f"now. {error}"
-            )
-
-        return (
-            "Something went wrong while completing that request. "
-            "Please try again or rephrase it."
-        )
+        self._thread = None
+        self._worker = None
+        self._set_busy(False)
 
     def _append_result(self, result: AIResult) -> None:
         action = result.parsed_response.get("action")
