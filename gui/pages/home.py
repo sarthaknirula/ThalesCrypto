@@ -3,9 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -45,6 +46,15 @@ class AIResult:
     dispatch_result: Any
 
 
+class AIIntegrationError(Exception):
+    """Error raised by the GUI coordinator for a failed pipeline stage."""
+
+    def __init__(self, stage: str, original: Exception) -> None:
+        super().__init__(str(original))
+        self.stage = stage
+        self.original = original
+
+
 class ChatInput(QTextEdit):
     """Text input that sends on Enter and inserts new lines on Shift+Enter."""
 
@@ -59,32 +69,6 @@ class ChatInput(QTextEdit):
             return
 
         super().keyPressEvent(event)
-
-
-class AIWorker(QObject):
-    """Run the AI backend pipeline off the GUI thread."""
-
-    finished = Signal(object)
-    failed = Signal(str)
-
-    def __init__(self, message: str) -> None:
-        super().__init__()
-        self.message = message
-
-    def run(self) -> None:
-        try:
-            service = AIService()
-            parser = AIParser()
-            dispatcher = AIDispatcher()
-
-            raw_response = service.generate_response(self.message)
-            parsed_response = parser.parse(raw_response)
-            dispatch_result = dispatcher.dispatch(parsed_response)
-        except Exception as exc:
-            self.failed.emit(str(exc))
-            return
-
-        self.finished.emit(AIResult(parsed_response, dispatch_result))
 
 
 class MessageBubble(QFrame):
@@ -191,8 +175,10 @@ class HomePage(QWidget):
         super().__init__()
         self.setObjectName("homePage")
         self._theme = DARK_THEME
-        self._thread: QThread | None = None
-        self._worker: AIWorker | None = None
+        self._ai_service: AIService | None = None
+        self._ai_parser = AIParser()
+        self._ai_dispatcher = AIDispatcher()
+        self._is_busy = False
 
         self._build_layout()
         self._append_welcome_message()
@@ -323,44 +309,80 @@ class HomePage(QWidget):
 
     def _send_message(self) -> None:
         message = self.input_edit.toPlainText().strip()
-        if not message or self._thread is not None:
+        if not message or self._is_busy:
             return
 
         self.input_edit.clear()
         self._append_message("user", message)
         self._append_typing_indicator()
         self._set_busy(True)
-        self._start_worker(message)
+        QApplication.processEvents()
 
-    def _start_worker(self, message: str) -> None:
-        self._thread = QThread(self)
-        self._worker = AIWorker(message)
-        self._worker.moveToThread(self._thread)
+        try:
+            result = self._run_ai_pipeline(message)
+        except Exception as exc:
+            self._remove_thinking_message()
+            self._append_error_message(exc)
+        else:
+            self._remove_thinking_message()
+            self._append_result(result)
+        finally:
+            self._set_busy(False)
+            self._scroll_to_bottom()
 
-        self._thread.started.connect(self._worker.run)
-        self._worker.finished.connect(self._handle_result)
-        self._worker.failed.connect(self._handle_error)
-        self._worker.finished.connect(self._cleanup_worker)
-        self._worker.failed.connect(self._cleanup_worker)
-        self._worker.finished.connect(self._thread.quit)
-        self._worker.failed.connect(self._thread.quit)
-        self._worker.finished.connect(self._worker.deleteLater)
-        self._worker.failed.connect(self._worker.deleteLater)
-        self._thread.finished.connect(self._thread.deleteLater)
-        self._thread.start()
+    def _run_ai_pipeline(self, message: str) -> AIResult:
+        try:
+            if self._ai_service is None:
+                self._ai_service = AIService()
 
-    def _handle_result(self, result: AIResult) -> None:
-        self._remove_thinking_message()
-        self._append_result(result)
+            raw_response = self._ai_service.generate_response(message)
+        except Exception as exc:
+            raise AIIntegrationError("service", exc) from exc
 
-    def _handle_error(self, error_message: str) -> None:
-        self._remove_thinking_message()
-        self._append_message("error", error_message)
+        try:
+            parsed_response = self._ai_parser.parse(raw_response)
+        except Exception as exc:
+            raise AIIntegrationError("parser", exc) from exc
 
-    def _cleanup_worker(self, *_args: object) -> None:
-        self._thread = None
-        self._worker = None
-        self._set_busy(False)
+        try:
+            dispatch_result = self._ai_dispatcher.dispatch(parsed_response)
+        except Exception as exc:
+            raise AIIntegrationError("dispatcher", exc) from exc
+
+        return AIResult(parsed_response, dispatch_result)
+
+    def _append_error_message(self, error: Exception) -> None:
+        self._append_message("error", self._friendly_error_message(error))
+
+    def _friendly_error_message(self, error: Exception) -> str:
+        if isinstance(error, AIIntegrationError):
+            if error.stage == "service":
+                return (
+                    "I couldn't reach the AI service or complete its request right "
+                    f"now. {error.original}"
+                )
+
+            if error.stage == "parser":
+                return (
+                    "I received a response from the AI service, but it was not in "
+                    f"the expected format. {error.original}"
+                )
+
+            return (
+                "I understood the request, but couldn't complete the crypto "
+                f"operation. {error.original}"
+            )
+
+        if isinstance(error, (RuntimeError, ConnectionError, TimeoutError)):
+            return (
+                "I couldn't reach the AI service or complete its request right "
+                f"now. {error}"
+            )
+
+        return (
+            "Something went wrong while completing that request. "
+            "Please try again or rephrase it."
+        )
 
     def _append_result(self, result: AIResult) -> None:
         action = result.parsed_response.get("action")
