@@ -6,6 +6,8 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, modes
 from cryptography.hazmat.primitives.ciphers.algorithms import AES
 
+from core.validators import validate_iv
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -123,14 +125,8 @@ class AESService:
     def _resolve_iv(self, iv: bytes | str | None) -> bytes:
         if iv is None:
             return self._generate_iv()
-        if isinstance(iv, str):
-            iv = iv.encode()
-        if not isinstance(iv, bytes):
-            raise TypeError("IV must be bytes or text.")
-        if len(iv) != self.BLOCK_SIZE_BYTES:
-            raise ValueError(f"IV must be exactly {self.BLOCK_SIZE_BYTES} bytes.")
 
-        return iv
+        return validate_iv(iv, self.BLOCK_SIZE_BYTES)
 
     def _load_key(self, key_path: Path) -> bytes:
         self._validate_file(key_path, "Key file")

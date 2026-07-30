@@ -22,6 +22,7 @@ from ai.dispatcher import AIDispatcher
 from ai.parser import AIParser
 from ai.service import AIService
 from ai.session_state import SessionState, get_session_state
+from ai.tools.validation import ToolValidationClarification
 from gui.theme import DARK_THEME, ThemeName, get_home_stylesheet
 
 
@@ -102,6 +103,12 @@ class AIWorker(QObject):
 
         try:
             dispatch_result = AIDispatcher().dispatch(parsed_response)
+        except ToolValidationClarification as exc:
+            parsed_response = {
+                "action": "clarify",
+                "question": exc.question,
+            }
+            dispatch_result = exc.question
         except Exception as exc:
             raise AIIntegrationError("dispatcher", exc) from exc
 
