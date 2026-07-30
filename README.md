@@ -1,6 +1,10 @@
 # Thales Crypto
 
-Thales Crypto is a desktop application built with **Python** and **PySide6** that provides modern cryptographic utilities through a clean graphical interface. The project focuses on modular architecture, separation of concerns, and extensibility. It also includes the foundation of an AI-powered assistant that will help users understand and perform cryptographic operations.
+Thales Crypto is a desktop application built with **Python** and **PySide6** that
+provides cryptographic utilities through a clean graphical interface. The project
+focuses on modular architecture, separation of concerns, and extensibility. It
+also includes an AI-powered assistant that helps users understand and perform
+cryptographic workflows through the existing application services.
 
 > **Project Status:** 🚧 Under Active Development
 
@@ -14,6 +18,7 @@ Thales Crypto is a desktop application built with **Python** and **PySide6** tha
 - File Encryption
 - File Decryption
 - Secure Key Generation
+- Optional hexadecimal IV support for encryption
 
 ### RSA
 - RSA Key Pair Generation
@@ -24,17 +29,42 @@ Thales Crypto is a desktop application built with **Python** and **PySide6** tha
 - File Encryption
 - File Decryption
 - Key Generation
+- Optional hexadecimal IV support for encryption
 
 ### Triple DES
 - File Encryption
 - File Decryption
 - Key Generation
+- Optional hexadecimal IV support for encryption
 
 ---
 
-# AI Assistant (In Progress)
+# Validation Behaviour
 
-The project includes the initial implementation of an AI assistant powered by the Gemini API.
+The application validates required paths before cryptographic services run.
+
+- Input files and key files must exist.
+- Explicit output directories must already exist.
+- If an AI-requested output directory does not exist, the assistant pauses and
+  asks whether the user wants to provide another directory or use the default
+  application output directory.
+- The application does not silently change a user-provided output location.
+- When the default output directory is selected, the application reports the actual generated file path.
+
+IV handling is centralized through a shared validator.
+
+- String IVs are trimmed before validation.
+- IVs are parsed using Python's `bytes.fromhex()`.
+- Validation checks the decoded byte array, not the raw string length.
+- AES requires a 16-byte IV, represented as 32 hexadecimal characters.
+- Double DES and Triple DES use the DES-family CBC block size, so their IVs are
+  validated against the byte length required by the underlying cipher.
+
+---
+
+# AI Assistant
+
+The project includes an AI assistant powered by the Gemini API.
 
 Current progress includes:
 
@@ -43,6 +73,9 @@ Current progress includes:
 - Prompt engineering
 - Modular AI architecture
 - Dedicated AI service layer
+- JSON response parsing and dispatch
+- Tool adapters for supported crypto services
+- Path validation before tool execution
 
 The AI assistant is designed to:
 
@@ -50,8 +83,10 @@ The AI assistant is designed to:
 - Recommend suitable encryption algorithms
 - Understand user intent
 - Return structured JSON responses for application actions
+- Ask clarification questions when required information is missing or invalid
 
-The AI **does not perform cryptographic operations directly**. Instead, it delegates operations to the existing cryptographic service layer.
+The AI **does not perform cryptographic operations directly**. Instead, it
+delegates operations to the existing cryptographic service layer.
 
 ---
 
@@ -133,7 +168,8 @@ Tools
 Cryptographic Services
 ```
 
-This design keeps responsibilities clearly separated and allows the AI system to grow independently of the cryptographic implementation.
+This design keeps responsibilities clearly separated and allows the AI system to
+grow independently of the cryptographic implementation.
 
 ---
 
@@ -147,6 +183,7 @@ ThalesCrypto/
 │   ├── parser.py
 │   ├── prompts.py
 │   ├── service.py
+│   ├── session_state.py
 │   └── tools/
 │
 ├── assets/
@@ -170,6 +207,7 @@ ThalesCrypto/
 - PySide6
 - Google Gemini API
 - Cryptography Library
+- unittest
 
 ---
 
@@ -240,9 +278,25 @@ python app.py
 
 ---
 
-# Running AI Service Tests
+# Running Tests
 
-An interactive test is available for manually testing the AI service.
+Run the focused local tests that do not require the Gemini client dependency.
+
+```bash
+python -m unittest tests.test_tools tests.test_iv_validation
+```
+
+Run all tests.
+
+```bash
+python -m unittest discover -s tests
+```
+
+The full test suite imports the Gemini AI service. If the Google Gemini package
+is not installed, full discovery will fail with a missing `google.genai`
+dependency.
+
+An interactive smoke test is available for manually testing the AI service.
 
 ```bash
 python tests/test_ai_service.py
@@ -267,12 +321,8 @@ The project is built around the following principles:
 
 ## AI Assistant
 
-- JSON response parser
-- Dispatcher implementation
-- Tool execution layer
 - AI-powered workflow automation
 - Context-aware conversations
-- Conversation history
 - Better prompt engineering
 
 ## Cryptography
